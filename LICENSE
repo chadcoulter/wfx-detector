@@ -1,0 +1,177 @@
+WFX PHANTOM DETECTOR — SOFTWARE LICENSE AND PATENT NON-APPROPRIATION ADDENDUM
+Draft 0.4 — For Legal Review
+Copyright (c) 2026 REDΣ Ecosystems Research Collective
+
+Licensor: REDΣ Ecosystems Research Collective
+Project: WFX Phantom Detector ("WFX")
+Separate patent framework: Defensive Patent License 1.1 (DPL 1.1)
+
+IMPORTANT: This is a proposed custom software copyright license, not an OSI-approved license and not DPL 1.1 itself. DPL 1.1 is a separate patent instrument and is not modified or automatically granted by this document. Review is required before treating this draft as legally settled.
+
+0. SOFTWARE COPYRIGHT LICENSE AND ACCEPTANCE
+
+0.1 Subject to compliance with this License, the Licensor grants each recipient a worldwide, royalty-free, nonexclusive copyright license to use, reproduce, modify, prepare derivative works of, distribute, and commercially deploy WFX, including in proprietary products and services.
+
+0.2 Exercise of these permissions is conditioned on compliance with Sections 1 through 12, including Sections 4 and 10. Recipients distributing copies or substantial portions must retain this copyright notice and License and must not misrepresent WFX's origin.
+
+0.3 These copyright permissions do not themselves grant patent rights. Any patent grant under DPL 1.1 requires separate satisfaction of that instrument's terms. No term here purports to amend DPL 1.1.
+
+1. PURPOSE
+
+WFX is published to support defensive identification, investigation, and mitigation of suspicious software supply-chain activity, repository and workflow abuse, and related security threats. Its public availability supports independent research, accountable commercial implementation, and continued access to the disclosed detection technology.
+
+This License is intended to prevent patent-based appropriation of the disclosed technology and to protect people and organizations harmed by negligent or abusive security practices.
+
+2. COVERED TECHNOLOGY
+
+"Covered Technology" means the detection methods, algorithms, correlation and analysis mechanisms, rules, signatures, computational transformations, implementations, and other technical inventions expressly disclosed in or necessarily embodied by WFX materials distributed under this License.
+
+Covered Technology includes modifications and derivative implementations to the extent they incorporate those disclosed inventions. Independent technology developed without incorporating Covered Technology is excluded.
+
+The term does not by itself claim ownership of third-party code, third-party services, public facts, or independently developed techniques.
+
+3. PERMITTED COMMERCIAL USE
+
+Subject to this License, recipients may use WFX for personal, academic, governmental, and commercial purposes; incorporate WFX into proprietary systems; modify and extend it; distribute software and products incorporating it; and provide services built upon it. No royalties are required for these software copyright uses.
+
+Patent rights, where applicable, are governed separately by DPL 1.1 or another expressly authorized patent license.
+
+4. PATENT NON-APPROPRIATION
+
+As a condition of exercising this License's copyright permissions, recipients agree not to:
+
+a. Seek or obtain patent claims directed to Covered Technology as disclosed by the Licensor.
+b. Claim exclusive patent rights over Covered Technology solely by modifying, translating, optimizing, or reimplementing the disclosed mechanisms.
+c. Assert patent rights against another party for practicing Covered Technology as disclosed in the licensed materials.
+d. Use patent claims covering modifications or improvements incorporating Covered Technology to prevent others from implementing the original Covered Technology.
+
+5. INDEPENDENT IMPROVEMENTS
+
+This License does not prohibit patent protection for independently patentable inventions developed by recipients, provided such patents are not asserted to restrict implementation or use of Covered Technology. Recipients may commercialize such improvements subject to applicable licenses.
+
+6. DEFENSIVE PATENT RIGHTS
+
+Nothing in this License prevents defensive action against a party asserting patent claims to restrict access to Covered Technology. Where DPL 1.1 independently applies, its unmodified terms govern the rights and obligations of its participants.
+
+7. REMEDIES
+
+Violation of Section 4 constitutes a material breach. The Licensor may pursue termination of rights granted here, subject to applicable law, notice requirements, and any applicable opportunity to cure, as well as other available remedies.
+
+8. SEPARATION OF LICENSES
+
+This License does not amend, replace, or create a modified DPL 1.1. Patent grants under DPL 1.1 remain subject to that separate instrument's unmodified terms.
+
+9. GOVERNING LAW
+
+To the extent permitted by applicable law, this License is governed by the laws of Illinois, United States, without regard to conflict-of-law principles.
+
+10. PROTECTION OF VICTIMS, DUE PROCESS, AND PROHIBITION OF LEGAL ABUSE
+
+10.1 Purpose and Public Interest
+
+WFX is released publicly to support defenses against software supply-chain exploitation, unauthorized repository or workflow activity, and other security failures. Its availability must not be used to shield negligent conduct, suppress legitimate claims, or deprive affected persons of access to justice.
+
+10.2 Express Condition of Software Licensing
+
+This Section is an express and material condition of the copyright permissions granted under Section 0. Any recipient exercising those permissions accepts these obligations independently of participation in DPL 1.1.
+
+10.3 Prohibited Legal Abuse
+
+Licensees agree not to:
+
+a. Use WFX or its licensing provisions to conceal, excuse, facilitate, or perpetuate exploitation arising from corporate negligence or security misconduct.
+b. Misrepresent rights, obligations, or protections established by this License.
+c. Use patent claims, contractual restrictions, litigation, or regulatory proceedings to obstruct lawful defensive mitigation or suppress legitimate claims concerning Covered Technology.
+d. Invoke this License to deny affected customers access to lawful remedies.
+e. Use this License or its protections to obtain immunity from accountability for conduct violating applicable law.
+
+10.4 Automatic and Irrevocable Waiver Upon Violation
+
+As an express condition of the permissions granted here, each licensee prospectively agrees that violating Section 10.3 triggers, to the maximum extent enforceable under applicable law, an automatic waiver of its right to invoke or enforce against affected customers, in connection with claims arising from or materially related to the violation:
+
+a. Mandatory or compelled arbitration agreements.
+b. Contractual jury-trial waivers.
+c. Contractual prohibitions on collective or class proceedings.
+d. Contractual restrictions on access to courts or judicial remedies.
+e. Contractual limitations unlawfully restricting due process, procedural fairness, discovery, or available remedies.
+f. Substantially equivalent provisions preventing affected customers from pursuing otherwise lawful claims.
+
+This waiver is intended to apply to agreements entered into before or after acceptance, to the maximum extent enforceable under applicable law. It is a direct contractual undertaking by the licensee and does not depend on formally amending an underlying customer agreement.
+
+10.5 Intended Third-Party Beneficiaries
+
+Customers materially affected by a violation of Section 10.3 are intended third-party beneficiaries of Sections 10.3 and 10.4 and may, to the extent permitted by applicable law, invoke the waiver and seek declaratory, injunctive, or other available relief. No additional agreement with the Licensor is required to establish this stated intention.
+
+10.6 Determination of Violation
+
+A violation may be established by a court or competent tribunal. The waiver is intended to arise upon the prohibited conduct itself rather than only upon judgment; this provision does not dispense with any adjudication required by applicable law.
+
+10.7 Preservation of Fundamental Rights
+
+Nothing here diminishes any person's constitutional, statutory, civil, contractual, or procedural rights. Greater protections under applicable law remain available.
+
+10.8 Survival and Severability
+
+Obligations arising from a triggering violation survive termination to the extent permitted by law. Unenforceability of one provision or remedy does not extinguish otherwise enforceable provisions or remedies.
+
+10.9 Relationship to Other License Provisions
+
+This Section is part of WFX's software copyright license and does not modify DPL 1.1. Applicable provisions should be interpreted consistently with the stated protective purposes and governing law.
+
+11. FORCED HAND — EMERGENCY PUBLICATION AND CONTINUING LEGAL ADAPTATION
+
+11.1 Necessity of Immediate Release
+
+WFX is being publicly released to facilitate timely defensive investigation and mitigation of active or emerging security threats. The Licensor acknowledges that conventional legal review and jurisdiction-specific formalities may be incomplete at publication. Public release is not intended to surrender the protections established here.
+
+11.2 Continuing Legal Adaptation
+
+The Licensor reserves the right to publish corrective and jurisdiction-specific revisions addressing enforceability, statutory compliance, procedural rights, remedies, third-party beneficiaries, and patent non-appropriation.
+
+11.3 Preservation of Original Intent
+
+Interpretation and subsequent revisions should preserve: (1) freely available legitimate defensive and commercial use; (2) prevention of patent appropriation of Covered Technology; (3) protection of those harmed by negligent or exploitative security practices; (4) access to due process and lawful remedies; and (5) prevention of legal procedures being used to perpetuate exploitation.
+
+11.4 Jurisdiction-Specific Application
+
+Where a provision is unenforceable, the remainder continues to the fullest extent permitted by law, and any permissible adaptation should preserve its protective purpose.
+
+11.5 Application of Future Revisions
+
+Revisions apply prospectively to recipients accepting the revised License and to existing relationships only where permitted by applicable law and their governing terms. No revision automatically creates retroactive obligations or binds nonconsenting parties where law forbids it. Independently available legal rights remain preserved.
+
+11.6 Declaration of Forced Hand
+
+This defensive publication is made in recognition that security threats can require a public response before every conventional legal formality is complete. The Licensor intends that publication urgency not itself deny affected persons otherwise available protection or remedy.
+
+12. USE AT YOUR OWN RISK — DISCLAIMER OF WARRANTY AND LIMITATION OF LIABILITY
+
+12.1 Experimental and Research Technology
+
+WFX is a defensive security research and detection tool. It may contain errors, false positives, false negatives, incomplete integrations, unforeseen behaviors, or vulnerabilities. Recipients use it at their own risk.
+
+12.2 No Warranty
+
+To the maximum extent permitted by law, WFX and associated documentation, detection rules, libraries, and implementations are provided "AS IS" and "AS AVAILABLE," WITHOUT WARRANTY OF ANY KIND, express or implied, including merchantability, fitness for a particular purpose, noninfringement, accuracy, reliability, availability, or suitability for security-critical deployment. WFX is not guaranteed to identify, prevent, or mitigate every threat.
+
+12.3 Responsibility for Implementation
+
+Recipients are responsible for pre-deployment validation; securing webhook, API, token, and credential handling; authorization and network boundaries; monitoring, alert retention, data minimization and privacy; operational recovery; and compliance with applicable law and contractual obligations. Commercial deployment does not transfer these responsibilities to the Licensor.
+
+12.4 Limitation of Licensor Liability
+
+To the maximum extent permitted by law, the Licensor and its contributors, researchers, developers, and authorized distributors are not liable for damages arising from use, inability to use, modification, distribution, or implementation of WFX, including direct, indirect, incidental, consequential, special, exemplary, or punitive damages, data loss, operational interruption, financial loss, security incidents, or system failures, except where the exclusion is prohibited by law.
+
+12.5 No Immunity for Licensee Misconduct
+
+Nothing here excuses licensee negligence, misconduct, unlawful activity, or violations of applicable law; overrides Section 10; shields licensees from claims involving their own products, infrastructure, or practices; waives the rights of nonconsenting persons; or excludes liability that cannot lawfully be excluded.
+
+12.6 Defensive Publication
+
+WFX is published in good faith for defensive analysis and responsible development. Publication is not certification of third-party implementations, a security guarantee, or assumption of responsibility for others' preexisting failures.
+
+12.7 Preservation of Public Protection
+
+Risk allocation in this Section does not defeat Sections 10 or 11, diminish applicable consumer protections, or authorize exploitation of persons harmed by corporate neglect. Applicable provisions are interpreted consistently with governing law and the License's stated purposes.
+
+END OF LICENSE
