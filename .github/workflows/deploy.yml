@@ -1,0 +1,103 @@
+name: deploy
+
+# Production deployment is environment-gated: it runs only when the protected
+# `production` environment approves, and uses repository secrets (never placeholders).
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment target
+        required: true
+        default: self-hosted
+        type: choice
+        options:
+          - self-hosted
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wfx-detector-deploy
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest ruff mypy
+      - name: Run tests (no Redis configured -> in-memory dev mode)
+        env:
+          GITHUB_WEBHOOK_SECRET: ci-test-secret
+          ALLOW_IN_MEMORY: "true"
+          API_ALERT_TOKEN: ci-test-token
+        run: python -m pytest tests/ -q
+      - name: Lint (ruff)
+        run: ruff check app/ tests/
+      - name: Type-check (mypy)
+        run: mypy app/
+      - name: Validate docker-compose configuration
+        env:
+          GITHUB_WEBHOOK_SECRET: ci-test-secret
+          ALLOW_IN_MEMORY: "true"
+          API_ALERT_TOKEN: ci-test-token
+          REDIS_PASSWORD: ci-test-redis
+        run: docker compose config >/dev/null
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.DEPLOY_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy over SSH
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          GITHUB_WEBHOOK_SECRET: ${{ secrets.GITHUB_WEBHOOK_SECRET }}
+          API_ALERT_TOKEN: ${{ secrets.API_ALERT_TOKEN }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Pin the expected host key; never blindly accept a new/unknown host.
+          KNOWN_HOSTS="$HOME/.ssh/known_hosts"
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s %s\n' "$SSH_HOST" "$SSH_HOST_KEY" > "$KNOWN_HOSTS"
+          chmod 600 "$KNOWN_HOSTS"
+          SSH_OPTS=(-i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS")
+          ssh "${SSH_OPTS[@]}" "$SSH_USER@$SSH_HOST" \
+            "test -d '$DEPLOY_PATH' || (echo 'DEPLOY_PATH missing on host' >&2; exit 1)"
+          scp "${SSH_OPTS[@]}" -r ./* "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+          # Defect 5: write secrets to a remote env file with strict quoting done locally,
+          # then let 'docker compose --env-file' read them. No secret is ever interpolated
+          # into a remote shell command string, so quotes/$/backticks cannot break out.
+          remote_env=$(mktemp)
+          {
+            printf 'GITHUB_WEBHOOK_SECRET=%s\n' "$(printf '%s' "$GITHUB_WEBHOOK_SECRET" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\$/\\$/g' -e 's/`/\\`/g' -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g')"
+            printf 'API_ALERT_TOKEN=%s\n' "$(printf '%s' "$API_ALERT_TOKEN" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\$/\\$/g' -e 's/`/\\`/g' -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g')"
+            printf 'REDIS_PASSWORD=%s\n' "$(printf '%s' "$REDIS_PASSWORD" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\$/\\$/g' -e 's/`/\\`/g' -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g')"
+            printf 'ALERT_WEBHOOK_URL=%s\n' "$(printf '%s' "$ALERT_WEBHOOK_URL" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\$/\\$/g' -e 's/`/\\`/g' -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g')"
+          } > "$remote_env"
+          scp "${SSH_OPTS[@]}" "$remote_env" "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env"
+          rm -f "$remote_env"
+          ssh "${SSH_OPTS[@]}" "$SSH_USER@$SSH_HOST" \
+            "chmod 600 '$DEPLOY_PATH/.env' && cd '$DEPLOY_PATH' && docker compose --env-file .env up -d --build && docker compose ps"

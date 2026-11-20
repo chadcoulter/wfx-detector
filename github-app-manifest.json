@@ -1,0 +1,37 @@
+{
+  "name": "WFX Phantom Detector",
+  "description": "Real-time detection of WFX Phantom / wfx-loot GitHub supply chain campaign (Nov 2026)",
+  "url": "https://github.com/your-org/wfx-detector",
+  "hook_attributes": {
+    "url": "https://YOUR_DOMAIN/webhook",
+    "active": true
+  },
+  "permissions": {
+    "contents": "read",
+    "metadata": "read",
+    "pull_requests": "read",
+    "workflows": "read",
+    "actions": "read",
+    "repository_hooks": "read"
+  },
+  "events": [
+    "pull_request",
+    "push",
+    "workflow_run",
+    "workflow_job",
+    "create",
+    "delete"
+  ],
+  "default_permissions": {
+    "contents": "read",
+    "metadata": "read",
+    "pull_requests": "read"
+  },
+  "default_events": [
+    "pull_request",
+    "push",
+    "workflow_run",
+    "create",
+    "delete"
+  ]
+}
