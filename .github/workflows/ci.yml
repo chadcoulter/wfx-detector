@@ -93,6 +93,48 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  build-check:
+    name: Build container (feature branch)
+    needs: [koppa-integrity]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/koppa-build-integrity'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned Koppa library
+        run: |
+          python -m pip install "git+https://github.com/chadcoulter/Koppa_Libraries.git@c5ba97cd7271896e6753ce72d876472aa8defa7d#subdirectory=koppa-0.1.1"
+
+      - name: Download sealed source manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: koppa-build-integrity
+          path: build/koppa/
+
+      - name: Verify source integrity before container build
+        run: python scripts/koppa_build_integrity.py verify
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container without publishing
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: wfx-detector:koppa-build-check
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   build:
     needs: [test, lint, koppa-integrity]
     runs-on: ubuntu-latest
