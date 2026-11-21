@@ -12,6 +12,7 @@ import time
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,19 +29,19 @@ class StorageUnavailableError(RuntimeError):
 
 
 # ===== Safe accessors for untrusted webhook payloads =====
-def _as_dict(value) -> dict:
+def _as_dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def _as_list(value) -> list:
+def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
-def _as_str(value, default: str = "") -> str:
+def _as_str(value: Any, default: str = "") -> str:
     return value if isinstance(value, str) else default
 
 
-def _as_int(value, default: int = 0) -> int:
+def _as_int(value: Any, default: int = 0) -> int:
     if isinstance(value, bool):
         return default
     if isinstance(value, int):
@@ -62,9 +63,9 @@ class Finding:
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     repository: str = ""
     actor: str = ""
-    raw_data: dict = field(default_factory=dict)
+    raw_data: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "type": self.finding_type,
             "severity": self.severity,
@@ -75,13 +76,13 @@ class Finding:
             "actor": self.actor,
         }
 
-    def to_redis_dict(self) -> dict:
+    def to_redis_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d["timestamp"] = self.timestamp.isoformat()
         return d
 
     @classmethod
-    def from_redis_dict(cls, data: dict) -> "Finding":
+    def from_redis_dict(cls, data: dict[str, Any]) -> "Finding":
         data = data.copy()
         data["timestamp"] = datetime.fromisoformat(data["timestamp"])
         return cls(**data)
@@ -125,7 +126,7 @@ class RedisStorage:
         return True
 
     def get_alert_count(self) -> int:
-        return self.client.llen(self.ALERTS_KEY)
+        return int(self.client.llen(self.ALERTS_KEY))
 
     # Run numbers — scoped by repository to avoid cross-repo collisions
     def _run_key(self, repo: str, workflow_id: str) -> str:
@@ -169,14 +170,14 @@ class RedisStorage:
         return not inserted
 
     # Metrics — expiring counters, no unbounded growth
-    def increment_metric(self, metric: str, labels: dict | None = None):
+    def increment_metric(self, metric: str, labels: dict[str, str] | None = None) -> None:
         key = f"{self.METRICS_KEY}:{metric}"
         if labels:
             key += ":" + ",".join(f"{k}={v}" for k, v in sorted(labels.items()))
         self.client.incr(key)
         self.client.expire(key, self.METRICS_TTL)
 
-    def get_metrics(self, prefix: str = "") -> dict:
+    def get_metrics(self, prefix: str = "") -> dict[str, int]:
         keys = self.client.keys(f"{self.METRICS_KEY}:{prefix}*")
         if not keys:
             return {}
@@ -187,7 +188,7 @@ class RedisStorage:
 class InMemoryStorage:
     """Fallback storage ONLY when explicitly allowed (dev mode). Thread-safe, TTL-bounded."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._alerts: list[Finding] = []
         self._run_numbers: dict[str, list[int]] = defaultdict(list)
         self._dedup: dict[str, float] = {}
@@ -195,7 +196,7 @@ class InMemoryStorage:
         self._max_alerts = 10000
         self._lock = threading.RLock()
 
-    def _purge_expired_dedup(self, now: float):
+    def _purge_expired_dedup(self, now: float) -> None:
         expired = [k for k, exp in self._dedup.items() if exp <= now]
         for k in expired:
             self._dedup.pop(k, None)
@@ -335,6 +336,7 @@ class WFXDetector:
         # - REDIS_URL configured  -> MUST use Redis; fail loudly, NEVER fall back (defect 5/6/7)
         # - no REDIS_URL          -> InMemoryStorage (dev/test; create_app enforces the
         #   production gate via ALLOW_IN_MEMORY, see panel finding 1)
+        self.storage: RedisStorage | InMemoryStorage
         if redis_url:
             self.storage = RedisStorage(redis_url, redis_password)  # raises StorageUnavailableError on failure
             logger.info("Using Redis storage")
@@ -348,13 +350,13 @@ class WFXDetector:
         expected = "sha256=" + hmac.new(self.webhook_secret, payload, hashlib.sha256).hexdigest()
         return hmac.compare_digest(expected, sig_header)
 
-    def process_event(self, event_type: str, payload: dict, strict: bool = False) -> list[Finding]:
+    def process_event(self, event_type: str, payload: dict[str, Any], strict: bool = False) -> list[Finding]:
         """Process a webhook event.
 
         strict=True (used by the webhook handler) re-raises processing failures so
         the caller does NOT acknowledge an event it failed to analyse (defect 6).
         """
-        findings = []
+        findings: list[Finding] = []
         try:
             if event_type == "pull_request":
                 findings = self._handle_pull_request(payload)
@@ -382,7 +384,7 @@ class WFXDetector:
         self.storage.increment_metric("webhook_requests", {"event": str(event_type), "status": "processed"})
         return deduped
 
-    def _handle_pull_request(self, payload: dict) -> list[Finding]:
+    def _handle_pull_request(self, payload: dict[str, Any]) -> list[Finding]:
         findings = []
         pr = _as_dict(payload.get("pull_request"))
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
@@ -406,7 +408,7 @@ class WFXDetector:
             findings.append(Finding("COMPROMISED_ACTOR", "CRITICAL", f"Known compromised actor: {actor}", url, repository=repo, actor=actor))
         return findings
 
-    def _handle_push(self, payload: dict) -> list[Finding]:
+    def _handle_push(self, payload: dict[str, Any]) -> list[Finding]:
         findings = []
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
         ref = _as_str(payload.get("ref"))
@@ -437,7 +439,7 @@ class WFXDetector:
                     findings.append(Finding("SUSPICIOUS_VSCODE_TASKS", "MEDIUM", ".vscode/tasks.json modified", link, repository=repo, actor=pusher))
         return findings
 
-    def _handle_workflow_run(self, payload: dict) -> list[Finding]:
+    def _handle_workflow_run(self, payload: dict[str, Any]) -> list[Finding]:
         findings = []
         run = _as_dict(payload.get("workflow_run"))
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
@@ -450,7 +452,7 @@ class WFXDetector:
                 _as_str(_as_dict(run.get("actor")).get("login"))))
         return findings
 
-    def _handle_workflow_job(self, payload: dict) -> list[Finding]:
+    def _handle_workflow_job(self, payload: dict[str, Any]) -> list[Finding]:
         """Analyse workflow_job events (defect 8).
 
         The campaign runs jobs with characteristic names and on throwaway
@@ -480,7 +482,7 @@ class WFXDetector:
                 url, repository=repo, actor=actor))
         return findings
 
-    def _handle_create(self, payload: dict) -> list[Finding]:
+    def _handle_create(self, payload: dict[str, Any]) -> list[Finding]:
         findings = []
         ref = _as_str(payload.get("ref"))
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
@@ -496,7 +498,7 @@ class WFXDetector:
                     break
         return findings
 
-    def _handle_delete(self, payload: dict) -> list[Finding]:
+    def _handle_delete(self, payload: dict[str, Any]) -> list[Finding]:
         findings = []
         ref = _as_str(payload.get("ref"))
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
@@ -533,9 +535,9 @@ class WFXDetector:
         """
         findings = []
         url = f"https://github.com/{repo}/blob/{manifest_path}"
-        pairs = set()  # (name, version) declared in this manifest
+        pairs: set[tuple[str, str]] = set()  # (name, version) declared in this manifest
 
-        def walk(node):
+        def walk(node: Any) -> None:
             if isinstance(node, dict):
                 deps = {}
                 for key in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies", "require", "constraint"):
