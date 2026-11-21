@@ -2,7 +2,7 @@ name: CI/CD - WFX Detector
 
 on:
   push:
-    branches: [main]
+    branches: [main, development/wfx-v17-no-license, feature/koppa-build-integrity]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -57,8 +57,44 @@ jobs:
       - name: Run mypy
         run: mypy app/
 
+  koppa-integrity:
+    name: Koppa source integrity
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned Koppa library
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "git+https://github.com/chadcoulter/Koppa_Libraries.git@c5ba97cd7271896e6753ce72d876472aa8defa7d#subdirectory=koppa-0.1.1"
+
+      - name: Seal and verify tracked inputs
+        run: |
+          python scripts/koppa_build_integrity.py seal
+          python scripts/koppa_build_integrity.py verify
+
+      - name: Negative tests — corrupted artifact and changed source
+        run: python scripts/koppa_build_integrity.py selftest
+
+      - name: Upload sealed build manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: koppa-build-integrity
+          path: build/koppa/
+          if-no-files-found: error
+          retention-days: 30
+
   build:
-    needs: [test, lint]
+    needs: [test, lint, koppa-integrity]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
@@ -67,6 +103,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned Koppa library
+        run: |
+          python -m pip install "git+https://github.com/chadcoulter/Koppa_Libraries.git@c5ba97cd7271896e6753ce72d876472aa8defa7d#subdirectory=koppa-0.1.1"
+
+      - name: Download sealed source manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: koppa-build-integrity
+          path: build/koppa/
+
+      - name: Verify source integrity before container build
+        run: python scripts/koppa_build_integrity.py verify
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
