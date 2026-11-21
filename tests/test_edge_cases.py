@@ -154,7 +154,7 @@ class TestNearMisses:
         assert not any(x.finding_type == "PROBE_BRANCH_CHORE" for x in f)
 
     def test_ci_sh_exact_6(self, detector):
-        f = detector.scan_file_content("r/r", "x", "", "main")  # baseline
+        detector.scan_file_content("r/r", "x", "", "main")  # baseline
         findings = detector._handle_push({
             "ref": "refs/heads/main", "pusher": {"name": "u"},
             "commits": [{"message": "x", "added": [".ci-abc123.sh"]}],
