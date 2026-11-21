@@ -266,6 +266,29 @@ python -m pytest tests/
 
 The GitHub Actions configuration includes automated testing and code-quality checks.
 
+## Koppa build integrity gate
+
+The CI workflow includes a `koppa-integrity` job that checks a deterministic
+manifest of Git-tracked build inputs using Koppa `FunctionToken` sealing.
+
+- Installs Koppa 0.1.1 from the pinned commit `c5ba97cd7271896e6753ce72d876472aa8defa7d` in [Koppa_Libraries](https://github.com/chadcoulter/Koppa_Libraries).
+- Canonicalizes tracked file paths, sizes, and SHA-256 digests into `build/koppa/manifest.koppa`.
+- Stores the deferred digest in `build/koppa/manifest.token`, separate from the framed manifest, and records the framed artifact digest in `manifest.sha256`.
+- Verifies the envelope and current source files, plus negative controls for tampering, a wrong token, and source modification.
+- Publishes the sealed manifest as a CI artifact; the production container build downloads and re-verifies it before packaging.
+- The Docker image publishes only when the existing tests, lint checks, and Koppa gate pass on `main`.
+
+Locally, after installing the pinned Koppa package:
+
+```bash
+python scripts/koppa_build_integrity.py seal
+python scripts/koppa_build_integrity.py verify
+python scripts/koppa_build_integrity.py selftest
+```
+
+The Koppa manifest checks build-input integrity within the CI run. It is not
+a cryptographic signature, a trusted-origin attestation, or an artifact signing service.
+
 ## Deployment
 
 The project includes configuration and documentation for containerized deployment.
