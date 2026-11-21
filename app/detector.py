@@ -584,5 +584,5 @@ class WFXDetector:
     def get_alert_count(self) -> int:
         return self.storage.get_alert_count()
 
-    def get_metrics(self, prefix: str = "") -> dict:
+    def get_metrics(self, prefix: str = "") -> dict[str, int]:
         return self.storage.get_metrics(prefix)
