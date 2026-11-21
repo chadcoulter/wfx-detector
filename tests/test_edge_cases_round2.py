@@ -183,8 +183,10 @@ class TestConcurrency:
                 errors.append(e)
 
         threads = [threading.Thread(target=worker, args=(i,)) for i in range(50)]
-        for t in threads: t.start()
-        for t in threads: t.join()
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
 
         assert not errors, f"Concurrent processing raised: {errors}"
         # Each push yields 2 findings (probe commit + payload script) × 50 unique repos
