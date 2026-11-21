@@ -1,16 +1,16 @@
 """Flask webhook server for WFX Phantom detector."""
-import os
-import json
 import hmac
+import json
 import logging
+import os
 import threading
 import time
-from datetime import datetime, timezone
-from typing import Optional, List
-from flask import Flask, request, jsonify, abort
+from datetime import UTC, datetime
+
+from flask import Flask, abort, jsonify, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .detector import WFXDetector, StorageUnavailableError
+from .detector import StorageUnavailableError, WFXDetector
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +67,9 @@ def _check_alert_token() -> bool:
 
 
 def create_app(
-    webhook_secret: Optional[str] = None,
-    alert_webhook: Optional[str] = None,
-    redis_url: Optional[str] = None,
+    webhook_secret: str | None = None,
+    alert_webhook: str | None = None,
+    redis_url: str | None = None,
     dedup_window: int = 3600,
 ) -> Flask:
     app = Flask(__name__)
@@ -123,7 +123,7 @@ def create_app(
 
     @app.route("/health", methods=["GET"])
     def health():
-        return jsonify({"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()})
+        return jsonify({"status": "healthy", "timestamp": datetime.now(UTC).isoformat()})
 
     @app.route("/ready", methods=["GET"])
     def ready():
@@ -148,7 +148,7 @@ def create_app(
         try:
             findings = detector.process_event(request.headers.get("X-GitHub-Event", "unknown"), data,
                                               strict=True)
-        except Exception as e:
+        except Exception:
             logger.exception("Webhook detection processing failed; returning 500 (no false ack)")
             return jsonify({"status": "error", "detail": "detection processing failed"}), 500
         if findings:
@@ -209,7 +209,7 @@ ALERT_MAX_ATTEMPTS = int(os.environ.get("ALERT_MAX_ATTEMPTS", "3"))
 ALERT_RETRY_BASE = float(os.environ.get("ALERT_RETRY_BASE_SECONDS", "1.0"))
 
 
-def _send_alerts(findings: List, webhook_url: Optional[str]) -> bool:
+def _send_alerts(findings: list, webhook_url: str | None) -> bool:
     """Send findings to the alert webhook with bounded retry/backoff (defect 15).
 
     Returns True on delivery, False after all attempts fail. Failures remain

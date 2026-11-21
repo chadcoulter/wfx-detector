@@ -2,16 +2,16 @@
 Edge-case and robustness tests for WFX Phantom Detector.
 Probes malformed payloads, boundary conditions, false pos/neg, and storage failures.
 """
-import os
-import json
-import hmac
 import hashlib
+import hmac
+import os
 
 os.environ.setdefault("ALLOW_IN_MEMORY", "true")
 os.environ.setdefault("GITHUB_WEBHOOK_SECRET", "edge-secret")
 
 import pytest
-from app.detector import WFXDetector, Finding, InMemoryStorage, RedisStorage
+
+from app.detector import Finding, WFXDetector
 from app.server import create_app
 
 

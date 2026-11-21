@@ -1,19 +1,16 @@
 """Regression tests for all 15 defects from the v7 full technical assessment.
 Each test maps 1:1 to a defect number and must pass against the delivered artifact.
 """
-import os
 import json
-import time
-import hmac
-import threading
+import os
 
 os.environ.setdefault("ALLOW_IN_MEMORY", "true")
 os.environ.setdefault("GITHUB_WEBHOOK_SECRET", "v7-secret")
 os.environ.setdefault("API_ALERT_TOKEN", "v7-token")
 
 import pytest
-from app.detector import WFXDetector, InMemoryStorage, StorageUnavailableError
-from app import create_app
+
+from app.detector import WFXDetector
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -149,7 +146,6 @@ class TestPanelFindings:
     def test_p1_storage_fails_closed_without_redis_or_optin(self):
         # The web app must NOT silently start with volatile storage when neither
         # REDIS_URL nor ALLOW_IN_MEMORY is configured (panel finding 1).
-        import importlib
         import app.server as srv
         for k in ("REDIS_URL", "ALLOW_IN_MEMORY"):
             os.environ.pop(k, None)

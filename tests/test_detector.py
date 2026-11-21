@@ -1,13 +1,14 @@
 """
 Tests for WFX Phantom Detector.
 """
-import os
 import json
+import os
+
 import pytest
-from datetime import datetime, timezone
+
 os.environ.setdefault("ALLOW_IN_MEMORY", "true")
 
-from app.detector import WFXDetector, Finding
+from app.detector import Finding, WFXDetector
 
 
 @pytest.fixture
@@ -51,7 +52,8 @@ class TestDetector:
     """Test core detection logic."""
 
     def test_verify_signature_valid(self, detector):
-        import hmac, hashlib
+        import hashlib
+        import hmac
         payload = b'{"test": "data"}'
         sig = "sha256=" + hmac.new(b"test-secret", payload, hashlib.sha256).hexdigest()
         assert detector.verify_signature(payload, sig)
@@ -149,7 +151,7 @@ class TestDetector:
             "workflow_run": {"workflow_id": 123, "run_number": 6, "name": "CI", "actor": {"login": "user"}},
             "repository": {"full_name": "test/repo"},
         }
-        
+
         detector._handle_workflow_run(payload1)
         detector._handle_workflow_run(payload2)
         detector._handle_workflow_run(payload3)

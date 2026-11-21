@@ -1,17 +1,17 @@
 """
 Round 2 edge cases: API input validation, concurrency, and storage failure modes.
 """
-import os
-import json
-import hmac
 import hashlib
+import hmac
+import os
 import threading
 
 os.environ.setdefault("ALLOW_IN_MEMORY", "true")
 os.environ.setdefault("GITHUB_WEBHOOK_SECRET", "edge2-secret")
 
 import pytest
-from app.detector import WFXDetector, InMemoryStorage
+
+from app.detector import WFXDetector
 from app.server import create_app
 
 

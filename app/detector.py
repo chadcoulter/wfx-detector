@@ -2,17 +2,16 @@
 Core detection logic for WFX Phantom / wfx-loot campaign.
 All IOCs sourced from public reporting (Nov 2026).
 """
-import re
 import hashlib
 import hmac
 import json
 import logging
+import re
 import threading
 import time
-from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Optional, Set
-from datetime import datetime, timezone
 from collections import defaultdict
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +59,7 @@ class Finding:
     severity: str  # CRITICAL, HIGH, MEDIUM, LOW, INFO
     detail: str
     url: str
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     repository: str = ""
     actor: str = ""
     raw_data: dict = field(default_factory=dict)
@@ -101,7 +100,7 @@ class RedisStorage:
     DEDUP_TTL = 24 * 3600
     METRICS_TTL = 24 * 3600
 
-    def __init__(self, redis_url: str, password: Optional[str] = None):
+    def __init__(self, redis_url: str, password: str | None = None):
         if not REDIS_AVAILABLE:
             raise StorageUnavailableError("redis-py not installed. Run: pip install redis")
         self.client = redis.from_url(redis_url, password=password or None, decode_responses=True)
@@ -117,7 +116,7 @@ class RedisStorage:
         self.client.expire(self.ALERTS_KEY, self.ALERTS_TTL)
         return True
 
-    def get_alerts(self, limit: int = 100) -> List[Finding]:
+    def get_alerts(self, limit: int = 100) -> list[Finding]:
         items = self.client.lrange(self.ALERTS_KEY, 0, limit - 1)
         return [Finding.from_redis_dict(json.loads(i)) for i in items]
 
@@ -138,11 +137,11 @@ class RedisStorage:
         self.client.expire(key, self.RUN_NUMBERS_TTL)
         return True
 
-    def get_run_numbers(self, repo: str, workflow_id: str) -> List[int]:
+    def get_run_numbers(self, repo: str, workflow_id: str) -> list[int]:
         items = self.client.zrange(self._run_key(repo, workflow_id), 0, -1)
         return [int(i) for i in items]
 
-    def check_run_gaps(self, repo: str, workflow_id: str, workflow_name: str, actor: str) -> List[Finding]:
+    def check_run_gaps(self, repo: str, workflow_id: str, workflow_name: str, actor: str) -> list[Finding]:
         findings = []
         runs = self.get_run_numbers(repo, workflow_id)
         for i in range(1, len(runs)):
@@ -170,7 +169,7 @@ class RedisStorage:
         return not inserted
 
     # Metrics — expiring counters, no unbounded growth
-    def increment_metric(self, metric: str, labels: Optional[dict] = None):
+    def increment_metric(self, metric: str, labels: dict | None = None):
         key = f"{self.METRICS_KEY}:{metric}"
         if labels:
             key += ":" + ",".join(f"{k}={v}" for k, v in sorted(labels.items()))
@@ -182,17 +181,17 @@ class RedisStorage:
         if not keys:
             return {}
         values = self.client.mget(keys)
-        return {k: int(v or 0) for k, v in zip(keys, values)}
+        return {k: int(v or 0) for k, v in zip(keys, values, strict=False)}
 
 
 class InMemoryStorage:
     """Fallback storage ONLY when explicitly allowed (dev mode). Thread-safe, TTL-bounded."""
 
     def __init__(self):
-        self._alerts: List[Finding] = []
-        self._run_numbers: Dict[str, List[int]] = defaultdict(list)
-        self._dedup: Dict[str, float] = {}
-        self._metrics: Dict[str, int] = defaultdict(int)
+        self._alerts: list[Finding] = []
+        self._run_numbers: dict[str, list[int]] = defaultdict(list)
+        self._dedup: dict[str, float] = {}
+        self._metrics: dict[str, int] = defaultdict(int)
         self._max_alerts = 10000
         self._lock = threading.RLock()
 
@@ -207,7 +206,7 @@ class InMemoryStorage:
             del self._alerts[self._max_alerts:]
         return True
 
-    def get_alerts(self, limit: int = 100) -> List[Finding]:
+    def get_alerts(self, limit: int = 100) -> list[Finding]:
         with self._lock:
             return self._alerts[:limit]
 
@@ -230,11 +229,11 @@ class InMemoryStorage:
                 self._run_numbers[key].append(run_number)
         return True
 
-    def get_run_numbers(self, repo: str, workflow_id: str) -> List[int]:
+    def get_run_numbers(self, repo: str, workflow_id: str) -> list[int]:
         with self._lock:
             return sorted(set(self._run_numbers[self._run_key(repo, workflow_id)]))
 
-    def check_run_gaps(self, repo: str, workflow_id: str, workflow_name: str, actor: str) -> List[Finding]:
+    def check_run_gaps(self, repo: str, workflow_id: str, workflow_name: str, actor: str) -> list[Finding]:
         runs = self.get_run_numbers(repo, workflow_id)
         findings = []
         for i in range(1, len(runs)):
@@ -263,7 +262,7 @@ class InMemoryStorage:
             self._dedup[key] = now + window_seconds
         return False
 
-    def increment_metric(self, metric: str, labels: Optional[dict] = None):
+    def increment_metric(self, metric: str, labels: dict | None = None):
         key = metric
         if labels:
             key += ":" + ",".join(f"{k}={v}" for k, v in sorted(labels.items()))
@@ -326,9 +325,9 @@ class WFXDetector:
     }
     C2_IPS = {"194.150.166.244", "18.143.168.96", "153.75.82.159", "193.32.204.199"}
 
-    def __init__(self, webhook_secret: str, alert_webhook: Optional[str] = None,
-                 redis_url: Optional[str] = None, dedup_window: int = 3600,
-                 redis_password: Optional[str] = None, allow_in_memory: bool = False):
+    def __init__(self, webhook_secret: str, alert_webhook: str | None = None,
+                 redis_url: str | None = None, dedup_window: int = 3600,
+                 redis_password: str | None = None, allow_in_memory: bool = False):
         self.webhook_secret = webhook_secret.encode()
         self.alert_webhook = alert_webhook
         self.dedup_window = dedup_window
@@ -349,7 +348,7 @@ class WFXDetector:
         expected = "sha256=" + hmac.new(self.webhook_secret, payload, hashlib.sha256).hexdigest()
         return hmac.compare_digest(expected, sig_header)
 
-    def process_event(self, event_type: str, payload: dict, strict: bool = False) -> List[Finding]:
+    def process_event(self, event_type: str, payload: dict, strict: bool = False) -> list[Finding]:
         """Process a webhook event.
 
         strict=True (used by the webhook handler) re-raises processing failures so
@@ -383,7 +382,7 @@ class WFXDetector:
         self.storage.increment_metric("webhook_requests", {"event": str(event_type), "status": "processed"})
         return deduped
 
-    def _handle_pull_request(self, payload: dict) -> List[Finding]:
+    def _handle_pull_request(self, payload: dict) -> list[Finding]:
         findings = []
         pr = _as_dict(payload.get("pull_request"))
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
@@ -407,7 +406,7 @@ class WFXDetector:
             findings.append(Finding("COMPROMISED_ACTOR", "CRITICAL", f"Known compromised actor: {actor}", url, repository=repo, actor=actor))
         return findings
 
-    def _handle_push(self, payload: dict) -> List[Finding]:
+    def _handle_push(self, payload: dict) -> list[Finding]:
         findings = []
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
         ref = _as_str(payload.get("ref"))
@@ -438,7 +437,7 @@ class WFXDetector:
                     findings.append(Finding("SUSPICIOUS_VSCODE_TASKS", "MEDIUM", ".vscode/tasks.json modified", link, repository=repo, actor=pusher))
         return findings
 
-    def _handle_workflow_run(self, payload: dict) -> List[Finding]:
+    def _handle_workflow_run(self, payload: dict) -> list[Finding]:
         findings = []
         run = _as_dict(payload.get("workflow_run"))
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
@@ -451,14 +450,14 @@ class WFXDetector:
                 _as_str(_as_dict(run.get("actor")).get("login"))))
         return findings
 
-    def _handle_workflow_job(self, payload: dict) -> List[Finding]:
+    def _handle_workflow_job(self, payload: dict) -> list[Finding]:
         """Analyse workflow_job events (defect 8).
 
         The campaign runs jobs with characteristic names and on throwaway
         branches. We flag suspicious job/workflow names and jobs whose runs were
         later deleted (conclusion cancelled on a probe branch).
         """
-        findings: List[Finding] = []
+        findings: list[Finding] = []
         job = _as_dict(payload.get("workflow_job"))
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
         name = _as_str(job.get("name"))
@@ -481,7 +480,7 @@ class WFXDetector:
                 url, repository=repo, actor=actor))
         return findings
 
-    def _handle_create(self, payload: dict) -> List[Finding]:
+    def _handle_create(self, payload: dict) -> list[Finding]:
         findings = []
         ref = _as_str(payload.get("ref"))
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
@@ -497,7 +496,7 @@ class WFXDetector:
                     break
         return findings
 
-    def _handle_delete(self, payload: dict) -> List[Finding]:
+    def _handle_delete(self, payload: dict) -> list[Finding]:
         findings = []
         ref = _as_str(payload.get("ref"))
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
@@ -508,7 +507,7 @@ class WFXDetector:
                                     f"https://github.com/{repo}", repository=repo, actor=sender))
         return findings
 
-    def scan_file_content(self, repo: str, path: str, content: str, ref: str = "main") -> List[Finding]:
+    def scan_file_content(self, repo: str, path: str, content: str, ref: str = "main") -> list[Finding]:
         repo, path, content, ref = _as_str(repo), _as_str(path), _as_str(content), _as_str(ref)
         findings = []
         url = f"https://github.com/{repo}/blob/{ref}/{path}"
@@ -524,7 +523,7 @@ class WFXDetector:
             findings.append(Finding("VSCODE_AUTORUN_TASK", "HIGH", f"{path}: runs on folderOpen", url, repository=repo))
         return findings
 
-    def check_package_manifest(self, repo: str, manifest_path: str, content: str) -> List[Finding]:
+    def check_package_manifest(self, repo: str, manifest_path: str, content: str) -> list[Finding]:
         """Match malicious packages to their OWN declared version (defect 5).
 
         Naive substring matching produced false positives: a malicious name in one
@@ -574,7 +573,7 @@ class WFXDetector:
                                             raw_data={"package": pkg, "version": version}))
         return findings
 
-    def get_alerts(self, limit: int = 100) -> List[Finding]:
+    def get_alerts(self, limit: int = 100) -> list[Finding]:
         return self.storage.get_alerts(limit)
 
     def clear_alerts(self) -> bool:
