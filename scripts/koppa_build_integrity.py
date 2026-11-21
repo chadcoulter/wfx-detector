@@ -109,7 +109,7 @@ def selftest() -> None:
         (output / MANIFEST_NAME).write_bytes(good)
         token_path = output / TOKEN_NAME
         token_path.write_text(
-            FunctionToken.from_digest(hashlib.sha256(b"incorrect").digest()).serialize() + "\\n",
+            FunctionToken.from_digest(hashlib.sha256(b"incorrect").digest()).serialize() + "\n",
             encoding="utf-8",
         )
         try:
