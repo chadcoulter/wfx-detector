@@ -15,6 +15,7 @@ import hmac
 import json
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 from koppa import FunctionToken, fixed_point_digest, seal, verify
@@ -91,15 +92,58 @@ def verify_build(output: Path) -> None:
         raise RuntimeError("Unsupported Koppa manifest schema")
 
 
+def selftest() -> None:
+    """Validate actual on-disk artifact tampering and source-change detection."""
+    with tempfile.TemporaryDirectory(prefix="wfx-koppa-") as temporary:
+        output = Path(temporary)
+        seal_build(output)
+        verify_build(output)
+        good = (output / MANIFEST_NAME).read_bytes()
+        (output / MANIFEST_NAME).write_bytes(good.replace(b"wfx-koppa-build-v1", b"wfx-koppa-build-v0"))
+        try:
+            verify_build(output)
+        except RuntimeError:
+            pass
+        else:
+            raise RuntimeError("Tampered artifact was not rejected")
+        (output / MANIFEST_NAME).write_bytes(good)
+        token_path = output / TOKEN_NAME
+        token_path.write_text(
+            FunctionToken.from_digest(hashlib.sha256(b"incorrect").digest()).serialize() + "\\n",
+            encoding="utf-8",
+        )
+        try:
+            verify_build(output)
+        except RuntimeError:
+            pass
+        else:
+            raise RuntimeError("Wrong token was not rejected")
+        seal_build(output)
+        original_payload = manifest_payload
+        try:
+            globals()["manifest_payload"] = lambda: original_payload() + b"changed"
+            try:
+                verify_build(output)
+            except RuntimeError:
+                pass
+            else:
+                raise RuntimeError("Changed source was not rejected")
+        finally:
+            globals()["manifest_payload"] = original_payload
+
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["seal", "verify"])
+    parser.add_argument("command", choices=["seal", "verify", "selftest"])
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
     if args.command == "seal":
         seal_build(args.output)
-    else:
+    elif args.command == "verify":
         verify_build(args.output)
+    else:
+        selftest()
     print(f"Koppa build integrity {args.command}: OK")
 
 
