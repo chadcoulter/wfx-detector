@@ -3,6 +3,7 @@ Each test maps 1:1 to a defect number and must pass against the delivered artifa
 """
 import json
 import os
+from pathlib import Path
 
 os.environ.setdefault("ALLOW_IN_MEMORY", "true")
 os.environ.setdefault("GITHUB_WEBHOOK_SECRET", "v7-secret")
@@ -12,12 +13,11 @@ import pytest
 
 from app.detector import WFXDetector
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def read(rel):
-    with open(os.path.join(ROOT, rel)) as f:
-        return f.read()
+    return (ROOT / rel).read_text(encoding="utf-8")
 
 
 @pytest.fixture
@@ -47,7 +47,7 @@ class TestSecurityAndDeployment:
     def test_04_rate_limiter_limitation_documented(self):
         # Defect 4: process-local limitation must be explicit in source/docs.
         srv = read("app/server.py")
-        dep = read("DEPLOYMENT.md") if os.path.exists(os.path.join(ROOT, "DEPLOYMENT.md")) else ""
+        dep = read("DEPLOYMENT.md") if (ROOT / "DEPLOYMENT.md").exists() else ""
         assert "process-local" in srv.lower() or "process-local" in dep.lower() or "workers" in dep.lower()
 
 
@@ -71,14 +71,15 @@ class TestDetectionAccuracy:
         # Defect 6: webhook path must use strict=True so failures aren't acked.
         srv = read("app/server.py")
         assert "strict=True" in srv
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             detector.process_event("push", None, strict=True)
 
     def test_07_no_premature_gap(self, detector):
         # Defect 7: a lone gap must not fire until a confirming higher run arrives.
-        p = lambda n: {"action": "completed", "workflow_run": {
-            "workflow_id": 9, "run_number": n, "name": "CI"},
-            "repository": {"full_name": "r/r"}}
+        def p(n):
+            return {"action": "completed", "workflow_run": {
+                "workflow_id": 9, "run_number": n, "name": "CI"},
+                "repository": {"full_name": "r/r"}}
         detector.process_event("workflow_run", p(1))
         f = detector.process_event("workflow_run", p(3))
         assert not any(x.finding_type == "WORKFLOW_RUN_GAP" for x in f)
@@ -122,7 +123,7 @@ class TestOperationalAndPackaging:
         assert "ruff check" in dep and "mypy app/" in dep
 
     def test_13_license_file_present_and_consistent(self):
-        assert os.path.exists(os.path.join(ROOT, "LICENSE"))
+        assert (ROOT / "LICENSE").exists()
         lic = read("LICENSE")
         pt = read("pyproject.toml")
         rm = read("README.md")
