@@ -47,8 +47,9 @@ jobs:
         with:
           python-version: "3.12"
       
-      - name: Install linting tools
+      - name: Install linting tools and application dependencies
         run: |
+          pip install -r requirements.txt
           pip install ruff mypy
       
       - name: Run ruff
