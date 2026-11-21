@@ -6,6 +6,7 @@ import os
 import threading
 import time
 from datetime import UTC, datetime
+from typing import Any, cast
 
 from flask import Flask, abort, jsonify, request
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -20,7 +21,7 @@ RATE_LIMIT_WINDOW = int(os.environ.get("RATE_LIMIT_WINDOW", "60"))
 
 # Process-local rate limiter. NOTE: with N gunicorn workers, effective limit is N× this value.
 # For cross-worker enforcement use a Redis-backed limiter; documented in DEPLOYMENT.md.
-_rate_state: dict = {}
+_rate_state: dict[str, list[float]] = {}
 _rate_lock = threading.Lock()
 _last_sweep: float = 0.0
 _SWEEP_INTERVAL = 60.0  # global cleanup cadence (seconds)
@@ -109,24 +110,24 @@ def create_app(
     app.config["DETECTOR"] = detector
     app.config["ALERT_WEBHOOK"] = alert_url
 
-    def admin_guard():
+    def admin_guard() -> None:
         key = _rate_limit_key()
         if not _check_alert_token():
             abort(401, "API token required")
         if not _check_rate_limit(key):
             abort(429, "Rate limit exceeded")
 
-    def require_webhook_secret():
+    def require_webhook_secret() -> None:
         # All non-webhook admin/scanner endpoints require the token too.
         if not _check_alert_token():
             abort(401, "API token required")
 
     @app.route("/health", methods=["GET"])
-    def health():
+    def health() -> Any:
         return jsonify({"status": "healthy", "timestamp": datetime.now(UTC).isoformat()})
 
     @app.route("/ready", methods=["GET"])
-    def ready():
+    def ready() -> Any:
         try:
             detector.storage.get_alert_count()
         except Exception as e:
@@ -135,7 +136,7 @@ def create_app(
         return jsonify({"status": "ready", "storage": type(detector.storage).__name__})
 
     @app.route("/webhook", methods=["POST"])
-    def webhook():
+    def webhook() -> Any:
         payload = request.get_data()
         if not detector.verify_signature(payload, request.headers.get("X-Hub-Signature-256", "")):
             abort(401, "Invalid signature")
@@ -156,7 +157,7 @@ def create_app(
         return jsonify({"status": "processed", "findings": len(findings)})
 
     @app.route("/alerts", methods=["GET"])
-    def get_alerts():
+    def get_alerts() -> Any:
         admin_guard()
         try:
             limit = max(1, min(int(request.args.get("limit", 100)), 1000))
@@ -167,18 +168,18 @@ def create_app(
                         "count": len(findings), "total": detector.get_alert_count()})
 
     @app.route("/alerts", methods=["DELETE"])
-    def clear_alerts():
+    def clear_alerts() -> Any:
         admin_guard()
         detector.clear_alerts()
         return jsonify({"status": "cleared"})
 
     @app.route("/metrics", methods=["GET"])
-    def get_metrics():
+    def get_metrics() -> Any:
         admin_guard()
         return jsonify({"metrics": detector.get_metrics(request.args.get("prefix", ""))})
 
     @app.route("/scan/content", methods=["POST"])
-    def scan_content():
+    def scan_content() -> Any:
         require_webhook_secret()
         if not _check_rate_limit(_rate_limit_key()):
             abort(429, "Rate limit exceeded")
@@ -187,11 +188,11 @@ def create_app(
         ref = data.get("ref", "main")
         if not all(isinstance(v, str) and v for v in (repo, path, content, ref)):
             abort(400, "repository, path, content, ref must be non-empty strings")
-        findings = detector.scan_file_content(repo, path, content, ref)
+        findings = detector.scan_file_content(cast(str, repo), cast(str, path), cast(str, content), cast(str, ref))
         return jsonify({"findings": [f.to_dict() for f in findings], "count": len(findings)})
 
     @app.route("/scan/package", methods=["POST"])
-    def scan_package():
+    def scan_package() -> Any:
         require_webhook_secret()
         if not _check_rate_limit(_rate_limit_key()):
             abort(429, "Rate limit exceeded")
@@ -199,7 +200,7 @@ def create_app(
         repo, path, content = data.get("repository"), data.get("path"), data.get("content")
         if not all(isinstance(v, str) and v for v in (repo, path, content)):
             abort(400, "repository, path, content must be non-empty strings")
-        findings = detector.check_package_manifest(repo, path, content)
+        findings = detector.check_package_manifest(cast(str, repo), cast(str, path), cast(str, content))
         return jsonify({"findings": [f.to_dict() for f in findings], "count": len(findings)})
 
     return app
@@ -209,7 +210,7 @@ ALERT_MAX_ATTEMPTS = int(os.environ.get("ALERT_MAX_ATTEMPTS", "3"))
 ALERT_RETRY_BASE = float(os.environ.get("ALERT_RETRY_BASE_SECONDS", "1.0"))
 
 
-def _send_alerts(findings: list, webhook_url: str | None) -> bool:
+def _send_alerts(findings: list[Any], webhook_url: str | None) -> bool:
     """Send findings to the alert webhook with bounded retry/backoff (defect 15).
 
     Returns True on delivery, False after all attempts fail. Failures remain
