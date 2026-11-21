@@ -107,7 +107,7 @@ class RedisStorage:
         try:
             self.client.ping()
         except Exception as e:
-            raise StorageUnavailableError(f"Redis connection failed: {e}")
+            raise StorageUnavailableError(f"Redis connection failed: {e}") from e
 
     # Alert queue
     def push_alert(self, finding: Finding) -> bool:
