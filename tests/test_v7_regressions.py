@@ -128,7 +128,8 @@ class TestOperationalAndPackaging:
         pt = read("pyproject.toml")
         rm = read("README.md")
         expected = "WFX Software License and Patent Non-Appropriation Addendum"
-        assert expected.casefold() in lic.casefold() and expected in pt and expected in rm
+        assert "software license and patent non-appropriation addendum" in lic.casefold()
+        assert expected in pt and expected in rm
         assert "MIT - Use freely" not in rm
 
     def test_14_deployment_doc_has_correct_workflow_name(self):
