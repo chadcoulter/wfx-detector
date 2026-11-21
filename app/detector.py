@@ -21,7 +21,7 @@ try:
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
-    redis = None
+    redis = None  # type: ignore[assignment]
 
 
 class StorageUnavailableError(RuntimeError):
@@ -104,7 +104,7 @@ class RedisStorage:
     def __init__(self, redis_url: str, password: str | None = None):
         if not REDIS_AVAILABLE:
             raise StorageUnavailableError("redis-py not installed. Run: pip install redis")
-        self.client = redis.from_url(redis_url, password=password or None, decode_responses=True)
+        self.client = redis.from_url(redis_url, password=password or None, decode_responses=True)  # type: ignore[no-untyped-call]
         try:
             self.client.ping()
         except Exception as e:
@@ -263,14 +263,14 @@ class InMemoryStorage:
             self._dedup[key] = now + window_seconds
         return False
 
-    def increment_metric(self, metric: str, labels: dict | None = None):
+    def increment_metric(self, metric: str, labels: dict[str, str] | None = None) -> None:
         key = metric
         if labels:
             key += ":" + ",".join(f"{k}={v}" for k, v in sorted(labels.items()))
         with self._lock:
             self._metrics[key] += 1
 
-    def get_metrics(self, prefix: str = "") -> dict:
+    def get_metrics(self, prefix: str = "") -> dict[str, int]:
         with self._lock:
             return {k: v for k, v in self._metrics.items() if k.startswith(prefix)}
 
@@ -385,7 +385,7 @@ class WFXDetector:
         return deduped
 
     def _handle_pull_request(self, payload: dict[str, Any]) -> list[Finding]:
-        findings = []
+        findings: list[Finding] = []
         pr = _as_dict(payload.get("pull_request"))
         repo = _as_str(_as_dict(payload.get("repository")).get("full_name"))
         actor = _as_str(_as_dict(pr.get("user")).get("login"))
