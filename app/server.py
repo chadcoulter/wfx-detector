@@ -78,7 +78,7 @@ def create_app(
     # Trust exactly one proxy hop. Docker publishes 8080 to a reverse proxy;
     # the raw X-Forwarded-For header is NEVER read directly (defect 1).
     trusted_proxies = int(os.environ.get("TRUSTED_PROXY_HOPS", "1"))
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=trusted_proxies,
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=trusted_proxies,  # type: ignore[method-assign]
                             x_proto=trusted_proxies, x_host=trusted_proxies, x_prefix=trusted_proxies)
 
     secret = webhook_secret or os.environ.get("GITHUB_WEBHOOK_SECRET")
