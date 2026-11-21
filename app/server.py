@@ -104,7 +104,7 @@ def create_app(
                                redis_password=redis_password, allow_in_memory=allow_in_memory)
     except StorageUnavailableError as e:
         # Fail loudly at startup — never run with silently-degraded storage
-        raise RuntimeError(f"Detector storage unavailable: {e}")
+        raise RuntimeError(f"Detector storage unavailable: {e}") from e
 
     app.config["DETECTOR"] = detector
     app.config["ALERT_WEBHOOK"] = alert_url
